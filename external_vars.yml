@@ -1,0 +1,50 @@
+---
+#
+schema: new_jiacui_test_schema  #Schema Name
+template: ansible_template      #Template Name
+sites: 
+  - name: "CSS-Site1"  #Site name
+  - name: "CSS-Site2"  #Site name
+site1: CSS-Site1  #Site name
+site2: CSS-Site2  #Site name
+#
+vrf: VRF1-ansible  #VRF name
+#
+bd_subnets:
+  - bd: BD1-ansible
+    subnet: 11.11.11.1/24
+  - bd: BD2-ansible
+    subnet: 22.22.22.1/24
+  - bd: BD3-ansible
+    subnet: 33.33.33.1/24
+#
+anp: ANP1  #ANP Name
+#
+epg:
+  - name: web-ansible
+    bd: BD1-ansible
+    contract: 
+      - name: web2app
+        contract_type: consumer
+  - name: app-ansible
+    bd: BD2-ansible
+    contract: 
+      - name: web2app
+        contract_type: provider
+      - name: app2db
+        contract_type: consumer    
+  - name: db-ansible
+    bd: BD3-ansible
+    contract: 
+      - name: app2db
+        contract_type: provider
+#
+filter: 
+  - name: filter1
+  - name: filter2
+#
+contract:
+  - name: web2app
+    filter: filter1
+  - name: app2db
+    filter: filter2

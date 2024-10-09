@@ -1,0 +1,30 @@
+---
+- hosts: nd
+  gather_facts: no
+  tasks:
+  - name: Parse Schema CSV
+    read_csv:
+      path: schema.csv
+      skipinitialspace: True
+    register: schema
+    delegate_to: localhost
+    
+  - name: Create Tenant
+    cisco.mso.mso_tenant:
+      tenant: "{{ item.name }}"
+      state: present
+    with_items: "{{ schema.list | selectattr('section', 'equalto', 'tenant') }}"
+
+  - name: Create Schema
+    cisco.mso.mso_schema:
+      schema: "{{ item.name }}"
+      state: present
+    with_items: "{{ schema.list | selectattr('section', 'equalto', 'schema') }}"
+
+  - name: Add a new template to a schema
+    cisco.mso.mso_schema_template:
+      tenant: "{{ item.tenant }}"
+      schema: "{{ item.schema }}"
+      template: "{{ item.name }}"
+      state: present
+    with_items: "{{ schema.list | selectattr('section', 'equalto', 'template') }}"

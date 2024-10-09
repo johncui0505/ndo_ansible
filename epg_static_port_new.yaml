@@ -1,0 +1,87 @@
+---
+- hosts: nd
+  gather_facts: no
+  vars_files:
+    - external_vars.yml
+  vars:
+    template_info: &template_info
+      schema: "{{ schema }}"
+      template: "{{ template }}"
+  tasks:
+  - name: Parse CSV
+    read_csv:
+      path: epg.csv
+      skipinitialspace: True
+    register: epg
+    delegate_to: localhost
+
+  - name: Add a new EPG
+    cisco.mso.mso_schema_template_anp_epg:
+      <<: *template_info
+      anp: "{{ anp }}"
+      epg: "{{ item.name }}"
+      bd:
+        name: "{{ item.bd }}"
+      vrf:
+        name: "{{ vrf }}"
+      state: present
+    with_items: "{{ epg.list | selectattr('section', 'equalto', 'epg') }}"
+
+  - name: Add a new filter entry
+    cisco.mso.mso_schema_template_filter_entry:
+      <<: *template_info
+      filter: "{{ item.name }}"
+      entry: test 
+      state: present
+    with_items: "{{ epg.list | selectattr('section', 'equalto', 'filter') }}"
+
+  - name: Add a new contract filter
+    cisco.mso.mso_schema_template_contract_filter:
+      <<: *template_info
+      contract: "{{ item.name }}"
+      contract_scope: global
+      filter: "{{ item.filter }}"
+      state: present
+    with_items: "{{ epg.list | selectattr('section', 'equalto', 'contract') }}"
+    
+  - name: Add contracts to EPGs
+    cisco.mso.mso_schema_template_anp_epg_contract:
+      <<: *template_info
+      anp: "{{ anp }}"
+      epg: "{{ item.name }}"
+      contract:
+        name: "{{ item.contract_name }}"
+        type: "{{ item.contract_type }}"
+      state: present
+    with_items: "{{ epg.list | selectattr('section', 'equalto', 'epg') }}"
+
+  - name: Add a new static port to a site EPG
+    cisco.mso.mso_schema_site_anp_epg_staticport:
+      <<: *template_info
+      site: "{{ item.Site }}"
+      anp: "{{ item.Application_Profile }}"
+      epg: "{{ item.EPG_Name }}"
+      type: port
+      pod: "{{ item.Pod_Name }}"
+      leaf: "{{ item.Leaf_ID }}"
+      path: "{{ item.Port_Name }}"
+      vlan: "{{ item.VLAN_ID }}"
+      deployment_immediacy: immediate
+      state: present
+    with_items: "{{ epg.list | selectattr('binding', 'equalto', 'static_port') }}"
+
+  # - name: Add a new static VPC to a site EPG
+  #   cisco.mso.mso_schema_site_anp_epg_staticport:
+  #     <<: *template_info
+  #     site: "{{ item.Site }}"
+  #     anp: "{{ item.Application_Profile }}"
+  #     epg: "{{ item.EPG_Name }}"
+  #     pod: "{{ item.Pod_Name }}"
+  #     leaf: "{{ item.Leaf_ID }}"
+  #     path: "{{ item.VPC_Path_Name }}"
+  #     vlan: "{{ item.VLAN_ID }}"
+  #     type: vpc
+  #     mode: untagged
+  #     deployment_immediacy: immediate
+  #     state: present
+  #   with_items: "{{ epg.list | selectattr('binding', 'equalto', 'static_port') }}"
